@@ -1,0 +1,41 @@
+++ date
++ echo 'start time: Mon Nov 25 14:39:25 CST 2024'
++ echo SLURM_JOBID=1603
++ echo SLURM_JOB_NODELIST=roqril007a
++ echo SLURM_JOB_PARTITION=gpu
++ echo SLURM_NNODES=1
++ echo SLURM_GPUS_ON_NODE=2
++ echo SLURM_SUBMIT_DIR=/mnt/research/research/projects/Sahika
++ GPUS_PER_NODE=2
+++ hostname -s
++ MAIN_HOST=roqril007a
++ export MASTER_ADDR=roqril007a
++ MASTER_ADDR=roqril007a
+++ python -
++ export MASTER_PORT=37049
++ MASTER_PORT=37049
++ export NNODES=1
++ NNODES=1
++ WORLD_SIZE=2
++ echo 'nnodes: 1'
++ export NCCL_IB_DISABLE=1
++ NCCL_IB_DISABLE=1
++ export OMP_NUM_THREADS=1
++ OMP_NUM_THREADS=1
++ export NCCL_DEBUG=INFO
++ NCCL_DEBUG=INFO
++ echo SLURM_JOBID=1603
++ echo SLURM_JOB_NODELIST=roqril007a
++ echo SLURM_JOB_PARTITION=gpu
++ echo SLURM_NNODES=1
++ echo SLURM_GPUS_ON_NODE=2
++ echo SLURM_SUBMIT_DIR=/mnt/research/research/projects/Sahika
++ echo SLURM_NTASKS=1
++ (( i=0 ))
++ (( i < 1 ))
++ (( ++i  ))
++ (( i < 1 ))
++ wait
++ /opt/slurm/bin/srun -lN1 --mem=200G --gres=gpu:4 -c 24 -N 1 -n 1 -r 0 bash -c 'python train_multi_gpus.py         -task_name MedSAM-ViT-B-20GPUs         -work_dir /research/projects/Sahika/MedSAM/work_dir         -batch_size 8         -num_workers 8         --world_size 2         --bucket_cap_mb 25         --grad_acc_steps 1         --node_rank 0         --init_method tcp://roqril007a:37049'
+++ date
++ echo 'END TIME: Mon Nov 25 14:39:26 CST 2024'
