@@ -10,6 +10,7 @@ We have customized and extended the original **MedSAM** and **UNETR** repositori
   _Segment Anything in Medical Images_  
   **Citation**:  
 
+```
 @article{MedSAM,
   title={Segment Anything in Medical Images},
   author={Ma, Jun and He, Yuting and Li, Feifei and Han, Lin and You, Chenyu and Wang, Bo},
@@ -18,10 +19,12 @@ We have customized and extended the original **MedSAM** and **UNETR** repositori
   pages={654},
   year={2024}
 }
+```
 
 - **UNETR**: [UNETR GitHub](https://github.com/Project-MONAI/research-contributions/tree/main/UNETR/BTCV)  
 _UNETR: Transformers for 3D Medical Image Segmentation_  
 **Citation**:  
+```
 @inproceedings{hatamizadeh2022unetr,
   title={Unetr: Transformers for 3d medical image segmentation},
   author={Hatamizadeh, Ali and Tang, Yucheng and Nath, Vishwesh and Yang, Dong and Myronenko, Andriy and Landman, Bennett and Roth, Holger R and Xu, Daguang},
@@ -29,6 +32,7 @@ _UNETR: Transformers for 3D Medical Image Segmentation_
   pages={574--584},
   year={2022}
 }
+```
 
 ## Features
 
