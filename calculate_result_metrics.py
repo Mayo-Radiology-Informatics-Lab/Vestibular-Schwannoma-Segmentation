@@ -16,6 +16,29 @@ def resample_to_reference(image, reference_image):
     resample.SetInterpolator(sitk.sitkNearestNeighbor)
     return resample.Execute(image)
 
+def calculate_tumor_volume_from_ground_truth(ground_truth):
+    """
+    Calculate tumor volume in mm³ from a ground truth SimpleITK image.
+    ground_truth: SimpleITK image of the ground truth mask.
+    """
+    # Get the voxel spacing (mm)
+    spacing = ground_truth.GetSpacing()  # (x, y, z)
+    
+    # Convert the ground truth to a numpy array
+    ground_truth_array = sitk.GetArrayFromImage(ground_truth)
+    
+    # Calculate the voxel volume in mm³
+    voxel_volume_mm3 = np.prod(spacing)
+    
+    # Count the number of non-zero voxels (tumor region)
+    tumor_voxel_count = np.count_nonzero(ground_truth_array)
+    
+    # Calculate the total tumor volume
+    tumor_volume_mm3 = tumor_voxel_count * voxel_volume_mm3
+    
+    return tumor_volume_mm3
+
+
 # Dice score calculation function
 def calculate_dice_score(pred, gt):
     pred_sum = pred.sum()
@@ -129,9 +152,25 @@ def calculate_rve(pred, gt):
 def parse_thresholds(threshold_str):
     return list(map(int, threshold_str.strip('[]').split(',')))
 
+def get_files_from_directory(directory):
+    """
+    Get all files from a directory, including subdirectories.
+    """
+    file_paths = []
+    for root, _, files in os.walk(directory):
+        for file in files:
+            file_paths.append(os.path.join(root, file))
+    return file_paths
+
 # Main processing function
-def main(gt_folder, pred_folder, csv_file, thresholds):
-    df = pd.read_csv(csv_file)
+def main(gt_folder, pred_folder, thresholds):
+    # Get all files from ground truth and prediction folders
+    gt_files = get_files_from_directory(gt_folder)
+    pred_files = get_files_from_directory(pred_folder)
+    
+    # Map filenames to paths for faster lookup
+    gt_files_map = {os.path.basename(f): f for f in gt_files}
+    pred_files_map = {os.path.basename(f): f for f in pred_files}
     
     # Dynamically create metrics for each threshold
     metrics = {
@@ -145,99 +184,100 @@ def main(gt_folder, pred_folder, csv_file, thresholds):
     missing_files = []
     image_metrics = []
     count = 0
-    # Main loop to process each image
-    for index, row in tqdm(df.iterrows()):
-        image_name = row['file_name']
-        tumor_size = row.get('tumor_volume') or row.get('mask_volume')
-
-        ground_truth_path = os.path.join(gt_folder, image_name)
-        predicted_mask_path = ground_truth_path.replace(gt_folder, pred_folder)
-
-        if os.path.exists(ground_truth_path) and os.path.exists(predicted_mask_path):
-            try:
-                ground_truth = sitk.ReadImage(ground_truth_path, sitk.sitkUInt8)
-                predicted_mask = sitk.ReadImage(predicted_mask_path, sitk.sitkUInt8)
-
-                if ground_truth.GetSize() != predicted_mask.GetSize():
-                    print('Mask sizes not matched, resampling...')
-                    predicted_mask = resample_to_reference(predicted_mask, ground_truth)
-
-                ground_truth_array = sitk.GetArrayFromImage(ground_truth)
-                predicted_mask_array = sitk.GetArrayFromImage(predicted_mask)
-
-                dice = calculate_dice_score_monai(predicted_mask_array, ground_truth_array)
-                s2s = calculate_s2s_dice_score(predicted_mask_array, ground_truth_array)
-                rve = calculate_rve(predicted_mask_array, ground_truth_array)
-
-                if np.count_nonzero(ground_truth_array) > 0 and np.count_nonzero(predicted_mask_array) > 0:
-                    hausdorff = calculate_hausdorff_distance(predicted_mask_array, ground_truth_array)
-                    hausdorff95 = calculate_hausdorff95_distance(predicted_mask_array, ground_truth_array)
-                else:
-                    print(f"Skipping Hausdorff calculation for {image_name} due to empty mask. GT tumor size: {tumor_size}")
-                    hausdorff, hausdorff95 = None, None
-
-                # Store metrics in the appropriate category
-                if tumor_size < thresholds[0]:
-                    metrics[f'<{thresholds[0]}']['dice'].append(dice)
-                    metrics[f'<{thresholds[0]}']['S2S'].append(s2s)
-                    metrics[f'<{thresholds[0]}']['RVE'].append(rve)
-                    if hausdorff is not None:
-                        metrics[f'<{thresholds[0]}']['hausdorff'].append(hausdorff)
-                        metrics[f'<{thresholds[0]}']['hausdorff95'].append(hausdorff95)
-                    else:
-                        metrics[f'{thresholds[i]}-{thresholds[i + 1]}']['hausdorff'].append(None)
-                        metrics[f'{thresholds[i]}-{thresholds[i + 1]}']['hausdorff95'].append(None)
-                else:
-                    for i in range(len(thresholds) - 1):
-                        if thresholds[i] <= tumor_size < thresholds[i + 1]:
-                            metrics[f'{thresholds[i]}-{thresholds[i + 1]}']['dice'].append(dice)
-                            metrics[f'{thresholds[i]}-{thresholds[i + 1]}']['S2S'].append(s2s)
-                            metrics[f'{thresholds[i]}-{thresholds[i + 1]}']['RVE'].append(rve)
-                            if hausdorff is not None:
-                                metrics[f'{thresholds[i]}-{thresholds[i + 1]}']['hausdorff'].append(hausdorff)
-                                metrics[f'{thresholds[i]}-{thresholds[i + 1]}']['hausdorff95'].append(hausdorff95)
-                            else:
-                                metrics[f'{thresholds[i]}-{thresholds[i + 1]}']['hausdorff'].append(None)
-                                metrics[f'{thresholds[i]}-{thresholds[i + 1]}']['hausdorff95'].append(None)
-                            break
-                    else:
-                        if tumor_size >= thresholds[-1]:
-                            metrics[f'>{thresholds[-1]}']['dice'].append(dice)
-                            metrics[f'>{thresholds[-1]}']['S2S'].append(s2s)
-                            metrics[f'>{thresholds[-1]}']['RVE'].append(rve)
-                            if hausdorff is not None:
-                                metrics[f'>{thresholds[-1]}']['hausdorff'].append(hausdorff)
-                                metrics[f'>{thresholds[-1]}']['hausdorff95'].append(hausdorff95)
-                            else:
-                                metrics[f'{thresholds[i]}-{thresholds[i + 1]}']['hausdorff'].append(None)
-                                metrics[f'{thresholds[i]}-{thresholds[i + 1]}']['hausdorff95'].append(None)
-
-                metrics['all']['dice'].append(dice)
-                metrics['all']['S2S'].append(s2s)
-                metrics['all']['RVE'].append(rve)
-                if hausdorff is not None:
-                    metrics['all']['hausdorff'].append(hausdorff)
-                    metrics['all']['hausdorff95'].append(hausdorff95)
-
-                # Store the metrics for each image
-                image_metrics.append((image_name, dice, s2s, rve, hausdorff, hausdorff95))
-                # Store the metrics for each image
-                #image_metrics.append({
-                #    "image_name": image_name,
-                #    "tumor_size": tumor_size,
-                #    "dice": dice,
-                #    "s2s": s2s,
-                #    "rve": rve,
-                #    "hausdorff": hausdorff,
-                #    "hausdorff95": hausdorff95
-                #})
-                # Increment the count of processed images
-                count += 1
-
-            except Exception as e:
-                print(f"Error processing {image_name}: {e}")
-        else:
+    
+    # Process each ground truth file
+    for image_name, gt_path in tqdm(gt_files_map.items()):
+        pred_path = pred_files_map.get(image_name)
+        if not pred_path:
             missing_files.append(image_name)
+            continue
+
+        try:
+            # Load ground truth and prediction masks
+            ground_truth = sitk.ReadImage(gt_path, sitk.sitkUInt8)
+            predicted_mask = sitk.ReadImage(pred_path, sitk.sitkUInt8)
+
+            if ground_truth.GetSize() != predicted_mask.GetSize():
+                print('Mask sizes not matched, resampling...')
+                predicted_mask = resample_to_reference(predicted_mask, ground_truth)
+
+            # Calculate tumor volume using the ground truth
+            tumor_volume = calculate_tumor_volume_from_ground_truth(ground_truth)
+
+            ground_truth_array = sitk.GetArrayFromImage(ground_truth)
+            predicted_mask_array = sitk.GetArrayFromImage(predicted_mask)
+
+            dice = calculate_dice_score_monai(predicted_mask_array, ground_truth_array)
+            s2s = calculate_s2s_dice_score(predicted_mask_array, ground_truth_array)
+            rve = calculate_rve(predicted_mask_array, ground_truth_array)
+
+            if np.count_nonzero(ground_truth_array) > 0 and np.count_nonzero(predicted_mask_array) > 0:
+                hausdorff = calculate_hausdorff_distance(predicted_mask_array, ground_truth_array)
+                hausdorff95 = calculate_hausdorff95_distance(predicted_mask_array, ground_truth_array)
+            else:
+                print(f"Skipping Hausdorff calculation for {image_name} due to empty mask. GT tumor size: {tumor_volume}")
+                hausdorff, hausdorff95 = None, None
+
+            # Store metrics in the appropriate category
+            if tumor_volume < thresholds[0]:
+                metrics[f'<{thresholds[0]}']['dice'].append(dice)
+                metrics[f'<{thresholds[0]}']['S2S'].append(s2s)
+                metrics[f'<{thresholds[0]}']['RVE'].append(rve)
+                if hausdorff is not None:
+                    metrics[f'<{thresholds[0]}']['hausdorff'].append(hausdorff)
+                    metrics[f'<{thresholds[0]}']['hausdorff95'].append(hausdorff95)
+                else:
+                    metrics[f'{thresholds[i]}-{thresholds[i + 1]}']['hausdorff'].append(None)
+                    metrics[f'{thresholds[i]}-{thresholds[i + 1]}']['hausdorff95'].append(None)
+            else:
+                for i in range(len(thresholds) - 1):
+                    if thresholds[i] <= tumor_volume < thresholds[i + 1]:
+                        metrics[f'{thresholds[i]}-{thresholds[i + 1]}']['dice'].append(dice)
+                        metrics[f'{thresholds[i]}-{thresholds[i + 1]}']['S2S'].append(s2s)
+                        metrics[f'{thresholds[i]}-{thresholds[i + 1]}']['RVE'].append(rve)
+                        if hausdorff is not None:
+                            metrics[f'{thresholds[i]}-{thresholds[i + 1]}']['hausdorff'].append(hausdorff)
+                            metrics[f'{thresholds[i]}-{thresholds[i + 1]}']['hausdorff95'].append(hausdorff95)
+                        else:
+                            metrics[f'{thresholds[i]}-{thresholds[i + 1]}']['hausdorff'].append(None)
+                            metrics[f'{thresholds[i]}-{thresholds[i + 1]}']['hausdorff95'].append(None)
+                        break
+                else:
+                    if tumor_volume >= thresholds[-1]:
+                        metrics[f'>{thresholds[-1]}']['dice'].append(dice)
+                        metrics[f'>{thresholds[-1]}']['S2S'].append(s2s)
+                        metrics[f'>{thresholds[-1]}']['RVE'].append(rve)
+                        if hausdorff is not None:
+                            metrics[f'>{thresholds[-1]}']['hausdorff'].append(hausdorff)
+                            metrics[f'>{thresholds[-1]}']['hausdorff95'].append(hausdorff95)
+                        else:
+                            metrics[f'{thresholds[i]}-{thresholds[i + 1]}']['hausdorff'].append(None)
+                            metrics[f'{thresholds[i]}-{thresholds[i + 1]}']['hausdorff95'].append(None)
+
+            metrics['all']['dice'].append(dice)
+            metrics['all']['S2S'].append(s2s)
+            metrics['all']['RVE'].append(rve)
+            if hausdorff is not None:
+                metrics['all']['hausdorff'].append(hausdorff)
+                metrics['all']['hausdorff95'].append(hausdorff95)
+
+            # Store the metrics for each image
+            image_metrics.append({
+                "image_name": image_name,
+                "tumor_volume": tumor_volume,
+                "dice": dice,
+                "s2s": s2s,
+                "rve": rve,
+                "hausdorff": hausdorff,
+                "hausdorff95": hausdorff95
+            })
+            # Increment the count of processed images
+            count += 1
+
+        except Exception as e:
+            print(f"Error processing {image_name}: {e}")
+    else:
+        missing_files.append(image_name)
 
     # Output missing files if any
     if missing_files:
@@ -278,8 +318,6 @@ def main(gt_folder, pred_folder, csv_file, thresholds):
             summary["mean_hausdorff"] = round(mean_hausdorff, 4)
             summary["mean_hausdorff95"] = round(mean_hausdorff95, 4)
 
-
-
     # Output the results
     output_data = {
         "Averaged Metrics": averaged_metrics,
@@ -290,8 +328,8 @@ def main(gt_folder, pred_folder, csv_file, thresholds):
     # Replace NaN values with None and ensure float32 values are converted to float
     output_data = json.loads(json.dumps(output_data, default=lambda o: None if np.isnan(o) else float(o) if isinstance(o, (np.float32, torch.Tensor)) else o))
 
-    #with open(output_file, 'w') as f:
-        #json.dump(output_data, f, indent=4)
+    with open(output_file, 'w') as f:
+        json.dump(output_data, f, indent=4)
 
     # Print the summary with labels
     print(f"Results saved to {output_file}")
@@ -346,9 +384,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process images and calculate Dice, Hausdorff, and Hausdorff95 distances.")
     parser.add_argument('-gt', '--ground_truth_folder', type=str, required=True, help="Folder containing ground truth masks.")
     parser.add_argument('-pred', '--pred_folder', type=str, required=True, help="Folder containing predicted segmentation masks.")
-    parser.add_argument('-csv', '--csv_file', type=str, required=True, help="CSV file with image names and tumor volumes.")
     parser.add_argument('-th', '--thresholds', type=parse_thresholds, default=[200, 400], help="List of thresholds for categorizing tumor size. Example: [200,400]")
 
     args = parser.parse_args()
 
-    main(args.ground_truth_folder, args.pred_folder, args.csv_file, args.thresholds)
+    main(args.ground_truth_folder, args.pred_folder, args.thresholds)
