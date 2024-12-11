@@ -163,7 +163,7 @@ def get_files_from_directory(directory):
     return file_paths
 
 # Main processing function
-def main(gt_folder, pred_folder, thresholds):
+def calculate_result_metrics(gt_folder, pred_folder, thresholds):
     # Get all files from ground truth and prediction folders
     gt_files = get_files_from_directory(gt_folder)
     pred_files = get_files_from_directory(pred_folder)
@@ -388,4 +388,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    main(args.ground_truth_folder, args.pred_folder, args.thresholds)
+    calculate_result_metrics(args.ground_truth_folder, args.pred_folder, args.thresholds)
