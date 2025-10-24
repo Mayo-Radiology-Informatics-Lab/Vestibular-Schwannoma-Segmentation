@@ -1,5 +1,14 @@
 # Vestibular Schwannoma Segmentation
 
+
+> **Update — October 24, 2025:** This repository now includes **training support for nnU-Net** and **U-Mamba** in addition to **MedSAM** and **UNETR**.
+
+
+
+These complement the existing training pipelines for **MedSAM** and **UNETR** already in this repository.
+
+
+
 ## Overview
 
 This repository provides tools and scripts for the segmentation of vestibular schwannomas from medical images using state-of-the-art deep learning models. The aim is to automate and enhance the accuracy of vestibular schwannoma detection and segmentation in MRI scans.
@@ -34,6 +43,30 @@ _UNETR: Transformers for 3D Medical Image Segmentation_
 }
 ```
 
+- **nnUNet**: 
+nnU-Net Base
+nnU-Net: A self-configuring method for deep learning-based biomedical image segmentation
+Citation:
+@article{isensee2021nnu,
+  title={nnU-Net: a self-configuring method for deep learning-based biomedical image segmentation},
+  author={Isensee, Fabian and Jaeger, Paul F and Kohl, Simon A A and Petersen, Jens and Maier-Hein, Klaus H},
+  journal={Nature Methods},
+  volume={18},
+  pages={203--211},
+  year={2021},
+  publisher={Nature Publishing Group}
+}
+
+nnU-Net ResEncL
+nnU-Net revisited: A call for rigorous validation in 3D medical image segmentation
+Citation:
+@article{isensee2024nnu,
+  title={nnU-Net revisited: A call for rigorous validation in 3D medical image segmentation},
+  author={Isensee, Fabian and others},
+  journal={arXiv preprint arXiv:2404.08541},
+  year={2024}
+}
+
 ## Features
 
 - Automated segmentation of vestibular schwannomas using **UNETR** and **MedSAM** models.
@@ -43,7 +76,9 @@ _UNETR: Transformers for 3D Medical Image Segmentation_
 
 ```plaintext
 VestibularSchwannomaSegmentation/
-├── UNETR/                       # UNETR-based segmentation models
+├── nnUNet_Base_ResEncL/         # nnUNET segmentation instructions
+├── U-Mamba/                     # U-Mamba segmentation instructions
+├── UNETR/                       # UNETR-based segmentation tools
 ├── MedSAM/                      # MedSAM segmentation tools
 ├── calculate_result_metrics.py  # Script for calculating segmentation metrics: DICE, Hausdorff, Hausdorff95, S2S, RVE scores
 └── README.md                    # Project description
@@ -79,6 +114,11 @@ VestibularSchwannomaSegmentation/
    - Run the inference notebook: `./UNETR/2_UNETR_inference.ipynb`.
    - This notebook will also execute `calculate_result_metrics.py` to evaluate the results.
 
+### **nnU-Net Base and ResEncL**
+See the guide: [nnUNet_Base_ResEncL/instructions.md](nnUNet_Base_ResEncL/instructions.md).
+
+### **U-Mamba**
+See the guide: [U-Mamba/umamba_training.md](U-Mamba/instructions.md).
 
 ## Evaluation Metrics
 
@@ -96,3 +136,5 @@ This repository builds upon the works of **MedSAM** and **UNETR**. We acknowledg
 
 - MedSAM: [GitHub](https://github.com/bowang-lab/MedSAM)
 - UNETR: [GitHub](https://github.com/Project-MONAI/research-contributions/tree/main/UNETR/BTCV)
+- nnU-Net (Base): [GitHub](https://github.com/MIC-DKFZ/nnUNet)
+- U-Mamba: [GitHub](https://github.com/bowang-lab/U-Mamba)
