@@ -447,11 +447,11 @@ def train_model():
 
 if __name__ == "__main__":
     parser.set_defaults(
-        tr_npy_path="/research/projects/Sahika/MedSAM/data/npy/MRI_VestSch",
+        tr_npy_path="/path/yo/your/train/npy/file",
         task_name="MedSAM-ViT-B",
         model_type="vit_b",
-        pretrain_model_path="/research/projects/Sahika/MedSAM/work_dir/MedSAM/sam_vit_b_01ec64.pth",
-        work_dir="/research/projects/Sahika/MedSAM/work_dir",
+        pretrain_model_path="/path/yo/your/model/file",
+        work_dir="/path/yo/your/directory"",
         batch_size=1,
         num_epochs=200,
         weight_decay=0.01,
