@@ -34,11 +34,11 @@ This repository provides the official implementation, documentation, and command
 
 ## 3.Dataset Preparation and Preprocessing
 
-Organize your dataset following the nnU-Net folder structure:
+Organize your dataset following the nnU-Net folder structure, as mentioned in the original repository:
 
 ```
 nnUNet_raw/
-├── Dataset300_SCHWANNOMA12_ALLTRAIN_C7/
+├── Dataset<DATASET_ID_WITH_3_DIGITS>_<DATASET_NAME>/
 │   ├── imagesTr/
 │   ├── imagesTs/
 │   ├── labelsTr/
@@ -101,4 +101,6 @@ nnUNetv2_predict -i /path/to/imagesTs -o /path/to/output_folder -d <DATASET_ID> 
 ---
 
 **Note:**  
-For changing epoch numbers, you can define custom trainer here: .../miniconda3/envs/nnunet/lib/python3.10/site-packages/nnunetv2/training/nnUNetTrainer/variants/training_length/nnUNetTrainer_Xepochs.py
+For changing epoch numbers, you can define custom trainer here: .../miniconda3/envs/nnunet/lib/python3.10/site-packages/nnunetv2/training/nnUNetTrainer/nnUNetTrainer.py
+
+Change this line: self.num_epochs = 8000 or self.num_epochs = 3500
